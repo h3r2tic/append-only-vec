@@ -200,6 +200,23 @@ impl<T> AppendOnlyVec<T> {
         let ptr = *self.data[array as usize].get();
         &*ptr.add(offset)
     }
+
+    pub fn get_mut(&mut self, idx: usize) -> &mut T {
+        assert!(idx < self.len()); // this includes the required ordering memory barrier
+        let (array, offset) = indices(idx);
+        // The ptr value below is safe, because the length check above will
+        // ensure that the data we want is already visible, since it used
+        // Ordering::Acquire on `self.count` which synchronizes with the
+        // Ordering::Release write in `self.push`.
+        let ptr = unsafe { *self.data[array as usize].get() };
+        unsafe { &mut *ptr.add(offset) }
+    }
+}
+
+impl<T> Default for AppendOnlyVec<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<T> Index<usize> for AppendOnlyVec<T> {
